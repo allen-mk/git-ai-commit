@@ -18,15 +18,10 @@ dependencies = [
 packages = ["core", "config", "utils"]
 py-modules = ["cli"]
 
-[dependency-groups]
-dev = [
-    "pytest-mock>=3.14.1",
-]
-
 [project.optional-dependencies]
-
 dev = [
     "black>=25.1.0",
     "isort>=6.0.1",
     "mypy>=1.17.1",
+    "pytest-mock>=3.14.1",
 ]
