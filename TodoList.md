@@ -65,6 +65,7 @@
   - [x] FileChange 模型（路径、diff、语言、函数列表）
   - [x] Context 模型（文件列表、README、历史提交、Issue、元数据）
   - [x] 使用 pydantic 进行数据验证
+
 - [x] 2.1.2 配置模型 (`config/models.py`)
   - [x] ModelConfig（provider、name、api_key、timeout）
   - [x] CollectorConfig 配置数组
@@ -74,14 +75,14 @@
 **验收标准**: 所有数据模型定义完整，通过 pydantic 验证测试
 
 ### 2.2 抽象接口定义 [P0]
-- [ ] 2.2.1 Collector 协议 (`core/contracts/collector.py`)
-  - [ ] 定义 `collect() -> Mapping[str, Any]` 方法
-  - [ ] 可选的初始化和配置参数
-- [ ] 2.2.2 Provider 协议 (`core/contracts/provider.py`)
-  - [ ] 定义 `generate(prompt: str, *, stream: bool = False)` 方法
-  - [ ] 支持同步和异步调用模式
-- [ ] 2.2.3 Formatter 协议 (`core/contracts/formatter.py`)
-  - [ ] 定义 `format(ctx: Context, model_output: str) -> str` 方法
+- [x] 2.2.1 Collector 协议 (`core/contracts/collector.py`)
+  - [x] 定义 `collect() -> Mapping[str, Any]` 方法
+  - [x] 可选的初始化和配置参数
+- [x] 2.2.2 Provider 协议 (`core/contracts/provider.py`)
+  - [x] 定义 `generate(prompt: str, *, stream: bool = False)` 方法
+  - [x] 支持同步和异步调用模式
+- [x] 2.2.3 Formatter 协议 (`core/contracts/formatter.py`)
+  - [x] 定义 `format(ctx: Context, model_output: str) -> str` 方法
 
 **验收标准**: 接口定义清晰，通过 mypy 类型检查
 
