@@ -99,17 +99,17 @@
 ## 💼 阶段三：核心模块MVP (Week 3-4)
 
 ### 3.1 基础 Collector 实现 [P0]
-- [ ] 3.1.1 DiffCollector (`core/collectors/diff_collector.py`)
-  - [ ] 执行 `git diff --cached` 获取暂存区变更
+- [x] 3.1.1 DiffCollector (`core/collectors/diff_collector.py`)
+  - [x] 执行 `git diff --cached` 获取暂存区变更
   - [ ] 解析 diff 输出，提取文件路径和变更内容
   - [ ] 可选的函数签名检测（基于语言）
   - [ ] 处理二进制文件和大文件场景
-- [ ] 3.1.2 ReadmeCollector (`core/collectors/readme_collector.py`) 
-  - [ ] 在项目根目录查找 README.md/README.rst
-  - [ ] 提取项目描述和关键信息
+- [x] 3.1.2 ReadmeCollector (`core/collectors/readme_collector.py`)
+  - [x] 在项目根目录查找 README.md/README.rst
+  - [x] 提取项目描述和关键信息
   - [ ] 可选的 LLM 摘要功能（通过 Provider）
-- [ ] 3.1.3 HistoryCollector (`core/collectors/history_collector.py`)
-  - [ ] 获取最近 N 次提交记录
+- [x] 3.1.3 HistoryCollector (`core/collectors/history_collector.py`)
+  - [x] 获取最近 N 次提交记录
   - [ ] 支持按文件范围或全仓库范围
   - [ ] 解析提交消息格式和风格
 

@@ -16,10 +16,6 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["core", "config", "utils"]
-
-
-[dependency-groups]
-
 py-modules = ["cli"]
 
 [project.optional-dependencies]
