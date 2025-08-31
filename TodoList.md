@@ -61,15 +61,15 @@
 ## 🏗️ 阶段二：核心抽象层 (Week 2)
 
 ### 2.1 数据模型定义 [P0]
-- [ ] 2.1.1 核心数据结构 (`core/contracts/models.py`)
-  - [ ] FileChange 模型（路径、diff、语言、函数列表）
-  - [ ] Context 模型（文件列表、README、历史提交、Issue、元数据）
-  - [ ] 使用 pydantic 进行数据验证
-- [ ] 2.1.2 配置模型 (`config/models.py`)
-  - [ ] ModelConfig（provider、name、api_key、timeout）
-  - [ ] CollectorConfig 配置数组
-  - [ ] FormatterConfig（template、template_dir）
-  - [ ] OutputConfig（语言、长度限制）
+- [x] 2.1.1 核心数据结构 (`core/contracts/models.py`)
+  - [x] FileChange 模型（路径、diff、语言、函数列表）
+  - [x] Context 模型（文件列表、README、历史提交、Issue、元数据）
+  - [x] 使用 pydantic 进行数据验证
+- [x] 2.1.2 配置模型 (`config/models.py`)
+  - [x] ModelConfig（provider、name、api_key、timeout）
+  - [x] CollectorConfig 配置数组
+  - [x] FormatterConfig（template、template_dir）
+  - [x] OutputConfig（语言、长度限制）
 
 **验收标准**: 所有数据模型定义完整，通过 pydantic 验证测试
 
