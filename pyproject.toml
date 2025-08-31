@@ -18,6 +18,11 @@ dependencies = [
 packages = ["core", "config", "utils"]
 py-modules = ["cli"]
 
+[dependency-groups]
+dev = [
+    "pytest-mock>=3.14.1",
+]
+
 [project.optional-dependencies]
 
 dev = [

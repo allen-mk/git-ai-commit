@@ -116,15 +116,15 @@
 **验收标准**: 基础 Collector 能正确收集对应信息，处理边界情况
 
 ### 3.2 基础 Provider 实现 [P0]
-- [ ] 3.2.1 OpenAI Provider (`core/llm/providers/openai.py`)
-  - [ ] 实现 HTTP 调用模式
-  - [ ] 实现 Streaming 调用模式
-  - [ ] API 密钥管理和错误处理
-  - [ ] 重试机制和超时配置
-- [ ] 3.2.2 LLM Router (`core/llm/router.py`)
-  - [ ] 根据配置选择 Provider
-  - [ ] Provider 实例化和配置传递
-  - [ ] 基础的路由逻辑
+- [x] 3.2.1 OpenAI Provider (`core/llm/providers/openai.py`)
+  - [x] 实现 HTTP 调用模式
+  - [x] 实现 Streaming 调用模式
+  - [x] API 密钥管理和错误处理
+  - [x] 重试机制和超时配置
+- [x] 3.2.2 LLM Router (`core/llm/router.py`)
+  - [x] 根据配置选择 Provider
+  - [x] Provider 实例化和配置传递
+  - [x] 基础的路由逻辑
 
 **验收标准**: OpenAI Provider 正常工作，Router 能正确路由请求
 
