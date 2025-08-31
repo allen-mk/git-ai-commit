@@ -129,14 +129,14 @@
 **验收标准**: OpenAI Provider 正常工作，Router 能正确路由请求
 
 ### 3.3 基础 Formatter 实现 [P0]
-- [ ] 3.3.1 Jinja2 Formatter (`core/formatter/jinja_formatter.py`)
-  - [ ] 模板加载和渲染逻辑
-  - [ ] 支持模板目录配置
-  - [ ] 模板变量注入（ctx、model_output、now等）
-- [ ] 3.3.2 默认模板 (`core/formatter/templates/`)
-  - [ ] conventional.j2 - Conventional Commits 模板
-  - [ ] simple.j2 - 简单模板作为备选
-  - [ ] 模板语法验证和错误处理
+- [x] 3.3.1 Jinja2 Formatter (`core/formatter/jinja_formatter.py`)
+  - [x] 模板加载和渲染逻辑
+  - [x] 支持模板目录配置
+  - [x] 模板变量注入（ctx、model_output、now等）
+- [x] 3.3.2 默认模板 (`core/formatter/templates/`)
+  - [x] conventional.j2 - Conventional Commits 模板
+  - [x] simple.j2 - 简单模板作为备选
+  - [x] 模板语法验证和错误处理
 
 **验收标准**: 模板渲染正常工作，输出符合 Conventional Commits 格式
 
