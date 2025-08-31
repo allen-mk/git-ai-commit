@@ -1,0 +1,28 @@
+# Default configuration for AI Git Commit Msg
+
+model:
+  provider: "openai"
+  name: "gpt-4o-mini"
+  # API Key should be set via environment variable: OPENAI_API_KEY
+  api_key: !env ${OPENAI_API_KEY}
+  timeout_sec: 20
+
+formatter:
+  template: "conventional.j2"
+  # Users can override this by placing templates in ~/.aicommit/templates
+  template_dir: null
+
+collectors:
+  - type: "diff"
+    options:
+      staged_only: true
+      detect_functions: false
+  - type: "history"
+    options:
+      scope: "repo"
+      limit: 5
+
+output:
+  language: "en"
+  max_subject_len: 72
+  wrap_body_at: 100
