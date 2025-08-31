@@ -141,15 +141,15 @@
 **验收标准**: 模板渲染正常工作，输出符合 Conventional Commits 格式
 
 ### 3.4 核心流水线 [P0]
-- [ ] 3.4.1 Pipeline 编排 (`core/pipeline.py`)
-  - [ ] 收集阶段：并行执行多个 Collector
-  - [ ] 生成阶段：调用 LLM Provider
-  - [ ] 格式化阶段：模板渲染
-  - [ ] 错误处理和降级策略
-- [ ] 3.4.2 配置驱动的组件装配
-  - [ ] 根据配置文件动态创建 Collector 实例
-  - [ ] Provider 选择和参数传递
-  - [ ] 模板选择和自定义支持
+- [x] 3.4.1 Pipeline 编排 (`core/pipeline.py`)
+  - [x] 收集阶段：并行执行多个 Collector
+  - [x] 生成阶段：调用 LLM Provider
+  - [x] 格式化阶段：模板渲染
+  - [x] 错误处理和降级策略
+- [x] 3.4.2 配置驱动的组件装配
+  - [x] 根据配置文件动态创建 Collector 实例
+  - [x] Provider 选择和参数传递
+  - [x] 模板选择和自定义支持
 
 **验收标准**: MVP Pipeline 端到端工作，能生成基础的 commit message
 
