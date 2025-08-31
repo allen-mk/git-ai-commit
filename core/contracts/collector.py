@@ -6,4 +6,5 @@ class Collector(Protocol):
 
     def collect(self) -> Mapping[str, Any]:
         """Collects information and returns it as a mapping."""
+
         ...
