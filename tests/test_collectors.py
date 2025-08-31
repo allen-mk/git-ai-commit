@@ -124,7 +124,7 @@ class TestHistoryCollector(unittest.TestCase):
         mock_process.stderr = ""
         mock_run.return_value = mock_process
 
-        collector = HistoryCollector(n=2)
+        collector = HistoryCollector(limit=2)
 
         # Act
         result = collector.collect()
@@ -142,7 +142,7 @@ class TestHistoryCollector(unittest.TestCase):
         mock_run.side_effect = subprocess.CalledProcessError(
             returncode=128, cmd="git log", stderr="does not have any commits"
         )
-        collector = HistoryCollector(n=5)
+        collector = HistoryCollector(limit=5)
 
         # Act
         result = collector.collect()
@@ -150,12 +150,12 @@ class TestHistoryCollector(unittest.TestCase):
         # Assert
         self.assertEqual(result, {"history": []})
 
-    def test_init_invalid_n(self):
+    def test_init_invalid_limit(self):
         # Act & Assert
         with self.assertRaises(ValueError):
-            HistoryCollector(n=0)
+            HistoryCollector(limit=0)
         with self.assertRaises(ValueError):
-            HistoryCollector(n=-1)
+            HistoryCollector(limit=-1)
 
 
 if __name__ == "__main__":

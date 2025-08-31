@@ -158,19 +158,19 @@
 ## 🖥️ 阶段四：CLI和基础集成 (Week 5)
 
 ### 4.1 CLI 入口点 [P0]
-- [ ] 4.1.1 命令行解析 (`cli.py`)
-  - [ ] 使用 argparse 或 click 实现
-  - [ ] 基础命令：`aicommit`
-  - [ ] 常用参数：--dry-run, --verbose, --config
-- [ ] 4.1.2 配置文件处理
-  - [ ] 默认配置文件 (`config/default.yaml`)
-  - [ ] 用户配置文件查找（~/.aicommit/config.yaml）
-  - [ ] 项目配置文件支持（.aicommit.yaml）
-  - [ ] 配置合并和优先级处理
-- [ ] 4.1.3 输出和交互
-  - [ ] Rich 美化输出
-  - [ ] 进度指示器
-  - [ ] 错误信息友好展示
+- [x] 4.1.1 命令行解析 (`cli.py`)
+  - [x] 使用 argparse 或 click 实现
+  - [x] 基础命令：`aicommit`
+  - [x] 常用参数：--dry-run, --verbose, --config
+- [x] 4.1.2 配置文件处理
+  - [x] 默认配置文件 (`config/default.yaml`)
+  - [x] 用户配置文件查找（~/.aicommit/config.yaml）
+  - [x] 项目配置文件支持（.aicommit.yaml）
+  - [x] 配置合并和优先级处理
+- [x] 4.1.3 输出和交互
+  - [x] Rich 美化输出
+  - [x] 进度指示器
+  - [x] 错误信息友好展示
 
 **验收标准**: CLI 基础功能完整，`aicommit --dry-run` 能输出生成的 commit message
 

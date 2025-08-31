@@ -117,11 +117,8 @@ class CommitMessageGenerator:
         logger.info(f"Generating raw message with provider '{self.config.model.provider}'.")
         try:
             provider_cls = provider_registry.get(self.config.model.provider)
-            provider: LLMProvider = provider_cls(
-                model_name=self.config.model.name,
-                api_key=self.config.model.api_key,
-                timeout=self.config.model.timeout_sec,
-            )
+            # The provider expects the whole ModelConfig object
+            provider: LLMProvider = provider_cls(config=self.config.model)
         except KeyError:
             raise ProviderError(f"Provider '{self.config.model.provider}' not found in registry.")
         except Exception as e:

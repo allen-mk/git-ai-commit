@@ -12,16 +12,18 @@ class HistoryCollector(Collector):
     A collector that retrieves the recent commit history from a Git repository.
     """
 
-    def __init__(self, n: int = 10):
+    def __init__(self, scope: str = "repo", limit: int = 10):
         """
         Initializes the HistoryCollector.
 
         Args:
-            n: The number of recent commits to retrieve.
+            scope: The scope of the history to retrieve ('repo' or 'file').
+            limit: The number of recent commits to retrieve.
         """
-        if n <= 0:
-            raise ValueError("Number of commits (n) must be a positive integer.")
-        self._n = n
+        if limit <= 0:
+            raise ValueError("Number of commits (limit) must be a positive integer.")
+        self.scope = scope
+        self._n = limit
 
     def collect(self) -> Mapping[str, Any]:
         """
