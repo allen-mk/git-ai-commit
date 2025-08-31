@@ -5,6 +5,7 @@ description = "A CLI tool to automatically generate Git commit messages using AI
 readme = "DEVELOP_Doc.md"
 requires-python = ">=3.9"
 dependencies = [
+    "click>=8.1.7",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "loguru>=0.7.3",
@@ -25,3 +26,6 @@ dev = [
     "mypy>=1.17.1",
     "pytest-mock>=3.14.1",
 ]
+
+[project.scripts]
+aicommit = "cli:main"

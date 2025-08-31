@@ -12,6 +12,10 @@ class DiffCollector(Collector):
     A collector that retrieves the staged changes from a Git repository.
     """
 
+    def __init__(self, staged_only: bool = True, detect_functions: bool = False):
+        self.staged_only = staged_only
+        self.detect_functions = detect_functions
+
     def collect(self) -> Mapping[str, Any]:
         """
         Executes `git diff --cached` to get the staged changes.
