@@ -13,6 +13,7 @@ from config.models import Config
 from core.pipeline import CommitMessageGenerator
 from utils.errors import AICommitException
 from utils.logger import setup_logger, logger
+from utils.git import is_git_repository, has_staged_changes, commit
 
 
 def apply_cli_overrides(config: Config, provider: str, model: str, template: str) -> Config:
@@ -47,8 +48,8 @@ async def run_generation(config: Config) -> str:
 @click.option(
     "--dry-run",
     is_flag=True,
-    default=True, # Default to dry-run for safety
-    help="Generate the commit message but do not apply it. (default: True)",
+    default=False,
+    help="Generate the commit message but do not apply it.",
 )
 @click.option(
     "-v", "--verbose",
@@ -66,6 +67,12 @@ def main(config_path: str, dry_run: bool, verbose: bool, provider: str, model: s
     setup_logger(log_level="DEBUG" if verbose else "INFO")
 
     try:
+        # 0. Pre-checks
+        if not is_git_repository():
+            raise AICommitException("Not a Git repository. Please run this command from the root of a Git repository.")
+        if not has_staged_changes():
+            raise AICommitException("No staged changes found. Please stage your changes before running.")
+
         # 1. Load configuration
         config = load_and_merge_configs(custom_config_path=config_path)
 
@@ -91,8 +98,11 @@ def main(config_path: str, dry_run: bool, verbose: bool, provider: str, model: s
             expand=False,
         ))
 
-        if dry_run:
-            console.print("\n[yellow]Dry run is enabled. To apply the commit, run without `--dry-run` (not yet implemented).[/yellow]")
+        if not dry_run:
+            commit(message)
+            console.print("\n[bold green]✅ Commit successful![/bold green]")
+        else:
+            console.print("\n[yellow]Dry run is enabled. To apply the commit, run without the `--dry-run` flag.[/yellow]")
 
     except AICommitException as e:
         # Log the full error if verbose, but only show the user-friendly message

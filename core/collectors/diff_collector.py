@@ -1,9 +1,9 @@
-import subprocess
 from typing import Any, Mapping
 
 from core.contracts.collector import Collector
 from core.registry import collector_registry
 from utils.errors import CollectorError
+from utils.git import get_staged_diff
 
 
 @collector_registry.register("diff")
@@ -27,17 +27,7 @@ class DiffCollector(Collector):
             CollectorError: If the git command fails.
         """
         try:
-            result = subprocess.run(
-                ["git", "diff", "--cached"],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            )
-            if result.returncode != 0 and result.returncode != 1:
-                 raise CollectorError(f"Failed to get git diff: {result.stderr}")
-
-            return {"diff": result.stdout}
-        except FileNotFoundError:
-            raise CollectorError("Git is not installed or not in PATH.")
-        except subprocess.CalledProcessError as e:
-            raise CollectorError(f"Failed to get git diff: {e.stderr}") from e
+            diff = get_staged_diff()
+            return {"diff": diff}
+        except Exception as e:
+            raise CollectorError(f"Failed to collect git diff: {e}") from e
