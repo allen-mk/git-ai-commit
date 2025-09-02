@@ -34,6 +34,36 @@ def has_staged_changes() -> bool:
         raise AICommitException(f"An unexpected error occurred while checking for staged changes: {e}")
 
 
+def get_current_branch_name() -> str:
+    """
+    Gets the current Git branch name.
+
+    Returns:
+        The current branch name.
+
+    Raises:
+        AICommitException: If the git command fails or not in a git repository.
+    """
+    if not is_git_repository():
+        raise AICommitException("Not a Git repository.")
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            encoding="utf-8",
+        )
+        return result.stdout.strip()
+    except FileNotFoundError:
+        raise AICommitException("Git is not installed or not in PATH.")
+    except subprocess.CalledProcessError as e:
+        raise AICommitException(f"Failed to get current branch name: {e.stderr}")
+    except Exception as e:
+        raise AICommitException(f"An unexpected error occurred while getting branch name: {e}")
+
+
 def get_staged_diff() -> str:
     """
     Retrieves the staged changes (diff) from the Git repository.
