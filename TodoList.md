@@ -191,12 +191,12 @@
 ## 🔧 阶段五：扩展功能 (Week 6-7)
 
 ### 5.1 更多 Collector 实现 [P1]
-- [ ] 5.1.1 IssueCollector (`core/collectors/issue_collector.py`)
-  - [ ] GitHub API 集成
-  - [ ] 根据分支名推导 Issue 号
+- [x] 5.1.1 IssueCollector (`core/collectors/issue_collector.py`)
+  - [x] GitHub API 集成
+  - [x] 根据分支名推导 Issue 号
   - [ ] GitLab 和 Jira 支持（可选）
-- [ ] 5.1.2 MCPCollector (`core/collectors/mcp_collector.py`)
-  - [ ] MCP 协议客户端实现
+- [x] 5.1.2 MCPCollector (`core/collectors/mcp_collector.py`)
+  - [x] MCP 协议客户端实现
   - [ ] 声明式工具调用配置
   - [ ] 超时和错误处理
 
