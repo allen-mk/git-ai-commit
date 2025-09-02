@@ -203,15 +203,15 @@
 **验收标准**: 扩展 Collector 能正确集成外部信息源
 
 ### 5.2 更多 Provider 实现 [P1]
-- [ ] 5.2.1 Claude Provider (`core/llm/providers/claude.py`)
-  - [ ] Anthropic API 集成
-  - [ ] Streaming 支持
-- [ ] 5.2.2 DeepSeek Provider (`core/llm/providers/deepseek.py`)
-  - [ ] DeepSeek API 集成
-  - [ ] 中文优化处理
-- [ ] 5.2.3 本地模型支持 (`core/llm/providers/local.py`)
-  - [ ] Ollama 集成
-  - [ ] OpenAI-compatible API 支持
+- [x] 5.2.1 Claude Provider (`core/llm/providers/claude.py`)
+  - [x] Anthropic API 集成
+  - [x] Streaming 支持
+- [x] 5.2.2 DeepSeek Provider (`core/llm/providers/deepseek.py`)
+  - [x] DeepSeek API 集成
+  - [x] 中文优化处理
+- [x] 5.2.3 本地模型支持 (`core/llm/providers/local.py`)
+  - [x] Ollama 集成
+  - [x] OpenAI-compatible API 支持
 
 **验收标准**: 多个 Provider 都能正常工作，支持配置切换
 

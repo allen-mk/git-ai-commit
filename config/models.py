@@ -5,6 +5,7 @@ class ModelConfig(BaseModel):
     provider: str = "openai"
     name: str = "gpt-4o-mini"
     api_key: Optional[str] = None
+    base_url: Optional[str] = None
     timeout_sec: int = 20
 
 class CollectorConfig(BaseModel):
