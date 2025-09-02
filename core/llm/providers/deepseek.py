@@ -1,7 +1,7 @@
 import os
 import httpx
 import json
-from typing import Iterable, Union, Generator
+from typing import AsyncIterable, Union, AsyncGenerator
 
 from core.contracts.provider import LLMProvider
 from config.models import ModelConfig
@@ -11,20 +11,18 @@ from utils.errors import ProviderError
 @provider_registry.register("deepseek")
 class DeepSeekProvider(LLMProvider):
     """
-    一个用于 DeepSeek API 的 Provider。
-    该 API 与 OpenAI API 兼容。
+    A provider for the DeepSeek API, which is compatible with the OpenAI API.
+    Updated for asynchronous operations.
     """
 
     def __init__(self, config: ModelConfig):
         self.config = config
-        # API 密钥管理
         self._api_key = config.api_key or os.getenv("DEEPSEEK_API_KEY")
         if not self._api_key:
             raise ProviderError("DeepSeek API key not found. Please set it in the config or as an environment variable DEEPSEEK_API_KEY.")
 
-        # 初始化 httpx 客户端
-        self._client = httpx.Client(
-            base_url="https://api.deepseek.com/v1", # 使用 v1 端点以保持兼容性
+        self._client = httpx.AsyncClient(
+            base_url="https://api.deepseek.com/v1",
             headers={
                 "Authorization": f"Bearer {self._api_key}",
                 "Content-Type": "application/json",
@@ -32,12 +30,12 @@ class DeepSeekProvider(LLMProvider):
             timeout=self.config.timeout_sec,
         )
 
-    def _request(self, payload: dict) -> httpx.Response:
+    async def _request(self, payload: dict) -> httpx.Response:
         """
-        发送 HTTP 请求。
+        Sends an HTTP request.
         """
         try:
-            response = self._client.post("/chat/completions", json=payload)
+            response = await self._client.post("/chat/completions", json=payload)
             response.raise_for_status()
             return response
         except httpx.TimeoutException as e:
@@ -54,48 +52,61 @@ class DeepSeekProvider(LLMProvider):
 
     def _build_payload(self, prompt: str, stream: bool) -> dict:
         """
-        构建请求体。
+        Builds the request payload.
         """
         return {
             "model": self.config.name,
             "messages": [{"role": "user", "content": prompt}],
             "stream": stream,
+            **self.config.parameters,
         }
 
-    def _process_stream_response(self, response: httpx.Response) -> Generator[str, None, None]:
+    async def _process_stream(self, response: httpx.Response) -> AsyncGenerator[str, None]:
         """
-        处理流式响应。
+        Processes a streaming response.
         """
         try:
-            for line in response.iter_lines():
+            async for line in response.aiter_lines():
                 if line.startswith("data:"):
                     chunk_str = line[len("data:"):].strip()
                     if chunk_str == "[DONE]":
                         break
                     if not chunk_str:
                         continue
-
                     try:
                         chunk = json.loads(chunk_str)
                         delta = chunk.get("choices", [{}])[0].get("delta", {})
                         content = delta.get("content")
                         if content:
                             yield content
-                    except json.JSONDecodeError:
+                    except (json.JSONDecodeError, IndexError):
                         continue
         finally:
-            response.close()
+            await response.aclose()
 
-    def generate(self, prompt: str, *, stream: bool = False) -> Union[str, Iterable[str]]:
+    async def generate(self, prompt: str, *, stream: bool = False) -> Union[str, AsyncIterable[str]]:
         """
-        从 DeepSeek LLM 生成响应。
+        Generates a response from the DeepSeek LLM.
         """
         payload = self._build_payload(prompt, stream)
 
         if stream:
-            response = self._client.stream("POST", "/chat/completions", json=payload)
-            return self._process_stream_response(response)
+            async def stream_generator():
+                try:
+                    async with self._client.stream("POST", "/chat/completions", json=payload) as response:
+                        response.raise_for_status()
+                        async for chunk in self._process_stream(response):
+                            yield chunk
+                except httpx.HTTPStatusError as e:
+                    error_body = await e.response.aread()
+                    try:
+                        error_details = json.loads(error_body)
+                        error_message = error_details.get("error", {}).get("message", error_body.decode())
+                    except json.JSONDecodeError:
+                        error_message = error_body.decode()
+                    raise ProviderError(f"DeepSeek API error ({e.response.status_code}): {error_message}") from e
+            return stream_generator()
         else:
-            response = self._request(payload)
+            response = await self._request(payload)
             data = response.json()
             return data["choices"][0]["message"]["content"]

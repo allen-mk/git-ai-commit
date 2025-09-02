@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict, List, Mapping, Union
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Mapping, Union
 
 from config.models import Config
 from core.contracts.collector import Collector
@@ -8,6 +8,7 @@ from core.contracts.models import Context
 from core.contracts.provider import LLMProvider
 from core.formatter.jinja_formatter import Jinja2Formatter
 from core.registry import collector_registry, provider_registry
+from utils.cache import Cache
 from utils.errors import CollectorError, FormatterError, ProviderError
 from utils.logger import logger
 
@@ -26,47 +27,55 @@ class CommitMessageGenerator:
             config: The configuration object.
         """
         self.config = config
+        self.cache = Cache(
+            cache_dir=self.config.cache.directory,
+            ttl_sec=self.config.cache.ttl_sec
+        ) if self.config.cache.enabled else None
 
-    async def generate(self) -> str:
+    async def generate(self, stream: bool = False) -> Union[str, AsyncGenerator[str, None]]:
         """
         Generates a commit message by running the full pipeline.
 
+        Args:
+            stream: Whether to stream the response from the provider.
+
         Returns:
-            The generated commit message.
+            If streaming, an async generator of message chunks.
+            If not streaming, the complete, formatted commit message as a string.
         """
         logger.info("Starting commit message generation pipeline...")
-
-        # 1. Collect context
+        # 1. Collect context (applies to both modes)
         try:
             context_data = await self._collect_context()
             logger.info(f"Collected context data: {list(context_data.keys())}")
         except CollectorError as e:
             logger.error(f"Failed to collect context: {e}", exc_info=True)
-            # Depending on desired behavior, we might return a default message or re-raise
-            return f"Error: Could not collect context. {e}"
+            raise  # Re-raise to be handled by the CLI
 
         context = self._aggregate_context(context_data)
         logger.debug(f"Aggregated context: {context.model_dump_json(indent=2)}")
 
-        # 2. Generate raw message from LLM
+        # 2. Generate raw message from LLM (with caching)
         try:
-            raw_message = await self._generate_raw_message(context)
-            logger.info("Successfully generated raw message from LLM.")
-            logger.debug(f"Raw LLM output:\n{raw_message}")
+            raw_message_or_stream = await self._generate_raw_message(context, stream=stream)
         except ProviderError as e:
             logger.error(f"Failed to generate message from provider: {e}", exc_info=True)
-            return f"Error: Could not generate message. {e}"
+            raise
 
-        # 3. Format the final message
-        try:
-            formatted_message = self._format_message(context, raw_message)
-            logger.info("Successfully formatted the commit message.")
-        except FormatterError as e:
-            logger.error(f"Failed to format message: {e}", exc_info=True)
-            return f"Error: Could not format message. {e}"
-
-        logger.success("Commit message generation pipeline completed successfully!")
-        return formatted_message
+        # 3. Handle streaming vs. non-streaming output
+        if stream:
+            # The CLI is responsible for consuming this generator
+            return raw_message_or_stream
+        else:
+            # 4. Format the final message for non-streaming mode
+            try:
+                formatted_message = self._format_message(context, raw_message_or_stream)
+                logger.info("Successfully formatted the commit message.")
+                logger.success("Commit message generation pipeline completed successfully!")
+                return formatted_message
+            except FormatterError as e:
+                logger.error(f"Failed to format message: {e}", exc_info=True)
+                raise
 
     async def _collect_context(self) -> Dict[str, Any]:
         """
@@ -76,11 +85,8 @@ class CommitMessageGenerator:
         tasks = []
         for collector_config in self.config.collectors:
             try:
-                # Instantiate collector
                 collector_cls = collector_registry.get(collector_config.type)
                 collector: Collector = collector_cls(**collector_config.options)
-
-                # Run async if possible, otherwise run in thread pool
                 if asyncio.iscoroutinefunction(collector.collect):
                     tasks.append(asyncio.create_task(collector.collect()))
                 else:
@@ -92,14 +98,11 @@ class CommitMessageGenerator:
 
         results: List[Mapping[str, Any]] = await asyncio.gather(*tasks)
 
-        # Merge results into a single dictionary
         combined_data: Dict[str, Any] = {}
         for data in results:
             for key, value in data.items():
-                # Simple merge: last one wins. Could be more sophisticated.
-                if value: # only merge non-empty values
+                if value:
                     combined_data[key] = value
-
         return combined_data
 
     def _aggregate_context(self, context_data: Dict[str, Any]) -> Context:
@@ -107,17 +110,13 @@ class CommitMessageGenerator:
         Aggregates data from collectors into a single Context object.
         """
         logger.info("Aggregating collector data into Context object.")
-        # Pydantic will automatically validate and map the fields
         return Context(**context_data)
 
-    async def _generate_raw_message(self, context: Context) -> str:
-        """
-        Generates the raw commit message using the LLM provider.
-        """
-        logger.info(f"Generating raw message with provider '{self.config.model.provider}'.")
+    async def _call_provider(self, context: Context, stream: bool) -> Union[str, AsyncIterable[str]]:
+        """The actual logic to call the LLM provider."""
+        logger.info(f"Calling LLM provider '{self.config.model.provider}'...")
         try:
             provider_cls = provider_registry.get(self.config.model.provider)
-            # The provider expects the whole ModelConfig object
             provider: LLMProvider = provider_cls(config=self.config.model)
         except KeyError:
             raise ProviderError(f"Provider '{self.config.model.provider}' not found in registry.")
@@ -127,17 +126,37 @@ class CommitMessageGenerator:
         prompt = self._create_prompt(context)
         logger.debug(f"Generated prompt for LLM:\n{prompt}")
 
-        # Assuming generate can be async
-        if asyncio.iscoroutinefunction(provider.generate):
-            response = await provider.generate(prompt)
-        else:
-            response = await asyncio.to_thread(provider.generate, prompt)
-
-        if not isinstance(response, str):
-            # For now, we'll just join streaming responses.
-            # A more advanced implementation would handle this differently.
-            return "".join(list(response))
+        response = await provider.generate(prompt, stream=stream)
         return response
+
+    async def _generate_raw_message(self, context: Context, stream: bool = False) -> Union[str, AsyncIterable[str]]:
+        """
+        Generates the raw commit message using the LLM provider, with caching.
+        Caching is bypassed for streaming requests.
+        """
+        if stream or not self.cache or not self.cache.is_enabled():
+            return await self._call_provider(context, stream)
+
+        # Create a stable string from the diffs to use as a cache key.
+        # It's important that this is deterministic.
+        if not context.files:
+            # If there are no files, we can't generate a diff-based cache key.
+            return await self._call_provider(context, stream=False)
+
+        diff_content = "\n---\n".join(sorted(f.diff for f in context.files))
+
+        cached_message = self.cache.get(diff_content)
+        if cached_message:
+            logger.info("Cache hit. Returning cached raw message.")
+            return cached_message
+
+        logger.info("Cache miss. Calling provider to generate new message.")
+        raw_message = await self._call_provider(context, stream=False)
+
+        if isinstance(raw_message, str):
+            self.cache.set(diff_content, raw_message)
+
+        return raw_message
 
     def _format_message(self, context: Context, model_output: str) -> str:
         """

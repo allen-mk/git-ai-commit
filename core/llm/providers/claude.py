@@ -1,7 +1,7 @@
 import os
 import httpx
 import json
-from typing import Iterable, Union, Generator
+from typing import AsyncIterable, Union, AsyncGenerator
 
 from core.contracts.provider import LLMProvider
 from config.models import ModelConfig
@@ -11,18 +11,16 @@ from utils.errors import ProviderError
 @provider_registry.register("claude")
 class ClaudeProvider(LLMProvider):
     """
-    一个用于 Anthropic Claude API 的 Provider。
+    A provider for the Anthropic Claude API, updated for asynchronous operations.
     """
 
     def __init__(self, config: ModelConfig):
         self.config = config
-        # API 密钥管理，优先从配置中读取，否则从环境变量 ANTHROPIC_API_KEY 读取
         self._api_key = config.api_key or os.getenv("ANTHROPIC_API_KEY")
         if not self._api_key:
             raise ProviderError("Anthropic API key not found. Please set it in the config or as an environment variable ANTHROPIC_API_KEY.")
 
-        # 初始化 httpx 客户端
-        self._client = httpx.Client(
+        self._client = httpx.AsyncClient(
             base_url="https://api.anthropic.com/v1",
             headers={
                 "x-api-key": self._api_key,
@@ -32,18 +30,17 @@ class ClaudeProvider(LLMProvider):
             timeout=self.config.timeout_sec,
         )
 
-    def _request(self, payload: dict) -> httpx.Response:
+    async def _request(self, payload: dict) -> httpx.Response:
         """
-        发送 HTTP 请求到 Claude API。
+        Sends an HTTP request to the Claude API.
         """
         try:
-            response = self._client.post("/messages", json=payload)
+            response = await self._client.post("/messages", json=payload)
             response.raise_for_status()
             return response
         except httpx.TimeoutException as e:
             raise ProviderError(f"Request to Anthropic timed out: {e}") from e
         except httpx.HTTPStatusError as e:
-            # 尝试解析来自 Anthropic 的错误响应
             try:
                 error_details = e.response.json()
                 error_message = error_details.get("error", {}).get("message", e.response.text)
@@ -55,30 +52,30 @@ class ClaudeProvider(LLMProvider):
 
     def _build_payload(self, prompt: str, stream: bool) -> dict:
         """
-        构建发送给 API 的请求体。
+        Builds the request payload for the API.
         """
-        return {
+        payload = {
             "model": self.config.name,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 4096,  # Anthropic requires max_tokens
             "stream": stream,
         }
+        # Merge additional parameters, ensuring 'max_tokens' is not overwritten if present
+        payload.update(self.config.parameters)
+        return payload
 
-    def _process_stream_response(self, response: httpx.Response) -> Generator[str, None, None]:
+    async def _process_stream(self, response: httpx.Response) -> AsyncGenerator[str, None]:
         """
-        处理来自 Claude API 的流式响应。
-        Anthropic streaming uses Server-Sent Events (SSE).
+        Processes a streaming response from the Claude API.
         """
         try:
-            for line in response.iter_lines():
+            async for line in response.aiter_lines():
                 line = line.strip()
                 if not line.startswith("data:"):
                     continue
-
                 data_str = line[len("data:"):].strip()
                 if not data_str:
                     continue
-
                 try:
                     chunk = json.loads(data_str)
                     chunk_type = chunk.get("type")
@@ -90,23 +87,34 @@ class ClaudeProvider(LLMProvider):
                                 yield content
                     elif chunk_type == "message_stop":
                         break
-                except json.JSONDecodeError:
+                except (json.JSONDecodeError, IndexError):
                     continue
         finally:
-            response.close()
+            await response.aclose()
 
-    def generate(self, prompt: str, *, stream: bool = False) -> Union[str, Iterable[str]]:
+    async def generate(self, prompt: str, *, stream: bool = False) -> Union[str, AsyncIterable[str]]:
         """
-        从 Claude LLM 生成响应。
+        Generates a response from the Claude LLM, supporting both streaming and non-streaming.
         """
         payload = self._build_payload(prompt, stream)
 
         if stream:
-            # 对于流式请求，我们需要一个不同的方式来处理响应
-            response = self._client.stream("POST", "/messages", json=payload)
-            return self._process_stream_response(response)
+            async def stream_generator():
+                try:
+                    async with self._client.stream("POST", "/messages", json=payload) as response:
+                        response.raise_for_status()
+                        async for chunk in self._process_stream(response):
+                            yield chunk
+                except httpx.HTTPStatusError as e:
+                    error_body = await e.response.aread()
+                    try:
+                        error_details = json.loads(error_body)
+                        error_message = error_details.get("error", {}).get("message", error_body.decode())
+                    except json.JSONDecodeError:
+                        error_message = error_body.decode()
+                    raise ProviderError(f"Anthropic API error ({e.response.status_code}): {error_message}") from e
+            return stream_generator()
         else:
-            response = self._request(payload)
+            response = await self._request(payload)
             data = response.json()
-            # 在非流式响应中，内容位于 content 列表的第一个元素的 text 字段
             return data.get("content", [{}])[0].get("text", "")

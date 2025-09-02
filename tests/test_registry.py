@@ -17,7 +17,11 @@ def test_registry_get_component():
     assert provider_class.__name__ == "DummyProvider"
 
 
-def test_registry_create_component():
+from config.models import ModelConfig
+
+
+@pytest.mark.asyncio
+async def test_registry_create_component():
     """Tests that a component can be instantiated from the registry."""
     collector = collector_registry.create("dummy")
     assert isinstance(collector, dummy_collector.DummyCollector)
@@ -26,12 +30,15 @@ def test_registry_create_component():
     collector_with_arg = collector_registry.create("dummy", value=100)
     assert collector_with_arg.collect() == {"dummy_data": "hello", "value": 100}
 
-    provider = provider_registry.create("dummy")
+    dummy_config = ModelConfig()
+    provider = provider_registry.create("dummy", config=dummy_config)
     assert isinstance(provider, dummy_provider.DummyProvider)
-    assert provider.generate("test") == "test response"
+    assert await provider.generate("test") == "test response"
 
-    provider_with_arg = provider_registry.create("dummy", response="custom response")
-    assert provider_with_arg.generate("test") == "custom response"
+    provider_with_arg = provider_registry.create(
+        "dummy", config=dummy_config, response="custom response"
+    )
+    assert await provider_with_arg.generate("test") == "custom response"
 
 
 def test_registry_get_unregistered_component():
