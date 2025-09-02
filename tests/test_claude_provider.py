@@ -29,7 +29,8 @@ def test_claude_provider_init_no_api_key(mocker):
     with pytest.raises(ProviderError, match="Anthropic API key not found"):
         ClaudeProvider(config)
 
-def test_claude_provider_generate_non_stream(claude_config, mocker):
+@pytest.mark.asyncio
+async def test_claude_provider_generate_non_stream(claude_config, mocker):
     """Tests the non-streaming generate method for Claude."""
     mock_response = mocker.MagicMock(spec=httpx.Response)
     mock_response.status_code = 200
@@ -37,10 +38,10 @@ def test_claude_provider_generate_non_stream(claude_config, mocker):
         "content": [{"type": "text", "text": "Hello from Claude!"}]
     }
 
-    mock_post = mocker.patch("httpx.Client.post", return_value=mock_response)
+    mock_post = mocker.patch("httpx.AsyncClient.post", return_value=mock_response)
 
     provider = ClaudeProvider(claude_config)
-    result = provider.generate("Say hi")
+    result = await provider.generate("Say hi")
 
     assert result == "Hello from Claude!"
     mock_post.assert_called_once()
@@ -49,32 +50,41 @@ def test_claude_provider_generate_non_stream(claude_config, mocker):
     assert call_args['stream'] is False
     assert call_args['max_tokens'] == 4096
 
-def test_claude_provider_generate_stream(claude_config, mocker):
+@pytest.mark.asyncio
+async def test_claude_provider_generate_stream(claude_config, mocker):
     """Tests the streaming generate method for Claude."""
     chunks = [
-        'event: message_start\ndata: {"type": "message_start", "message": {"id": "msg_123", "role": "assistant"}}\n',
-        'event: content_block_delta\ndata: {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Hello"}}\n',
-        'event: content_block_delta\ndata: {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": " from"}}\n',
-        'event: content_block_delta\ndata: {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": " Claude!"}}\n',
-        'event: message_stop\ndata: {"type": "message_stop", "stop_reason": "end_turn"}\n'
+        'event: message_start\ndata: {"type": "message_start", "message": {"id": "msg_123", "role": "assistant"}}',
+        'event: content_block_delta\ndata: {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Hello"}}',
+        'event: content_block_delta\ndata: {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": " from"}}',
+        'event: content_block_delta\ndata: {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": " Claude!"}}',
+        'event: message_stop\ndata: {"type": "message_stop", "stop_reason": "end_turn"}'
     ]
 
-    # httpx.Response.iter_lines expects an iterator of strings, not bytes
-    mock_response = mocker.MagicMock(spec=httpx.Response)
-    mock_response.iter_lines.return_value = (line for line in "\n".join(chunks).splitlines())
+    async def aiter_lines():
+        for chunk in "\n".join(chunks).splitlines():
+            yield chunk
 
-    mock_stream = mocker.patch("httpx.Client.stream", return_value=mock_response)
+    mock_response = mocker.MagicMock(spec=httpx.Response)
+    mock_response.aiter_lines.return_value = aiter_lines()
+
+    # Create an async context manager mock
+    async_mock_context = mocker.AsyncMock()
+    async_mock_context.__aenter__.return_value = mock_response
+
+    mock_stream = mocker.patch("httpx.AsyncClient.stream", return_value=async_mock_context)
 
     provider = ClaudeProvider(claude_config)
-    stream_result = provider.generate("Say hi", stream=True)
+    stream_result = await provider.generate("Say hi", stream=True)
 
-    result = list(stream_result)
+    result = [chunk async for chunk in stream_result]
     assert result == ["Hello", " from", " Claude!"]
     mock_stream.assert_called_once()
     call_args = mock_stream.call_args[1]['json']
     assert call_args['stream'] is True
 
-def test_claude_provider_http_error(claude_config, mocker):
+@pytest.mark.asyncio
+async def test_claude_provider_http_error(claude_config, mocker):
     """Tests that a ProviderError is raised on HTTP status errors for Claude."""
     mock_response = mocker.MagicMock(spec=httpx.Response)
     mock_response.status_code = 400
@@ -84,16 +94,17 @@ def test_claude_provider_http_error(claude_config, mocker):
     http_error = httpx.HTTPStatusError(
         "Bad Request", request=mocker.MagicMock(), response=mock_response
     )
-    mocker.patch("httpx.Client.post", side_effect=http_error)
+    mocker.patch("httpx.AsyncClient.post", side_effect=http_error)
 
     provider = ClaudeProvider(claude_config)
     with pytest.raises(ProviderError, match="Anthropic API error \\(400\\): Malformed request"):
-        provider.generate("Say hi")
+        await provider.generate("Say hi")
 
-def test_claude_provider_timeout_error(claude_config, mocker):
+@pytest.mark.asyncio
+async def test_claude_provider_timeout_error(claude_config, mocker):
     """Tests that a ProviderError is raised on timeout for Claude."""
-    mocker.patch("httpx.Client.post", side_effect=httpx.TimeoutException("Timeout!"))
+    mocker.patch("httpx.AsyncClient.post", side_effect=httpx.TimeoutException("Timeout!"))
 
     provider = ClaudeProvider(claude_config)
     with pytest.raises(ProviderError, match="Request to Anthropic timed out: Timeout!"):
-        provider.generate("Say hi")
+        await provider.generate("Say hi")
