@@ -1,10 +1,12 @@
-from typing import Iterable, Protocol, Union
+from typing import AsyncIterable, Protocol, Union
 
 
 class LLMProvider(Protocol):
     """A protocol for LLM providers."""
 
-    def generate(self, prompt: str, *, stream: bool = False) -> Union[str, Iterable[str]]:
+    async def generate(
+        self, prompt: str, *, stream: bool = False
+    ) -> Union[str, AsyncIterable[str]]:
         """
         Generates a response from the LLM.
 
@@ -13,6 +15,6 @@ class LLMProvider(Protocol):
             stream: Whether to stream the response.
 
         Returns:
-            The LLM's response, either as a string or an iterable of strings.
+            The LLM's response, either as a string or an async iterable of strings.
         """
         ...

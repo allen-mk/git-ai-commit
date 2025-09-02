@@ -26,3 +26,8 @@ output:
   language: "en"
   max_subject_len: 72
   wrap_body_at: 100
+
+cache:
+  enabled: true
+  ttl_sec: 3600
+  directory: "~/.cache/aicommit"

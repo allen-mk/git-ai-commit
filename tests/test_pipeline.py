@@ -24,7 +24,7 @@ class TestCommitMessageGenerator(unittest.TestCase):
             def __init__(self, *args, **kwargs):
                 pass
 
-            def generate(self, prompt: str, *, stream: bool = False) -> str:
+            async def generate(self, prompt: str, *, stream: bool = False) -> str:
                 return "feat: dummy feature"
 
         self.dummy_collector = DummyCollector
