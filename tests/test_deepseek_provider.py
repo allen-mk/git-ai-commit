@@ -29,7 +29,8 @@ def test_deepseek_provider_init_no_api_key(mocker):
     with pytest.raises(ProviderError, match="DeepSeek API key not found"):
         DeepSeekProvider(config)
 
-def test_deepseek_provider_generate_non_stream(deepseek_config, mocker):
+@pytest.mark.asyncio
+async def test_deepseek_provider_generate_non_stream(deepseek_config, mocker):
     """Tests the non-streaming generate method for DeepSeek."""
     mock_response = mocker.MagicMock(spec=httpx.Response)
     mock_response.status_code = 200
@@ -37,10 +38,10 @@ def test_deepseek_provider_generate_non_stream(deepseek_config, mocker):
         "choices": [{"message": {"content": "Hello from DeepSeek!"}}]
     }
 
-    mock_post = mocker.patch("httpx.Client.post", return_value=mock_response)
+    mock_post = mocker.patch("httpx.AsyncClient.post", return_value=mock_response)
 
     provider = DeepSeekProvider(deepseek_config)
-    result = provider.generate("Say hi")
+    result = await provider.generate("Say hi")
 
     assert result == "Hello from DeepSeek!"
     mock_post.assert_called_once()
@@ -48,30 +49,40 @@ def test_deepseek_provider_generate_non_stream(deepseek_config, mocker):
     assert call_args['model'] == "deepseek-chat"
     assert call_args['stream'] is False
 
-def test_deepseek_provider_generate_stream(deepseek_config, mocker):
+@pytest.mark.asyncio
+async def test_deepseek_provider_generate_stream(deepseek_config, mocker):
     """Tests the streaming generate method for DeepSeek."""
     chunks = [
-        'data: {"choices": [{"delta": {"content": "Hello"}}]}\n\n',
-        'data: {"choices": [{"delta": {"content": " from"}}]}\n\n',
-        'data: {"choices": [{"delta": {"content": " DeepSeek!"}}]}\n\n',
-        'data: [DONE]\n\n'
+        'data: {"choices": [{"delta": {"content": "Hello"}}]}',
+        'data: {"choices": [{"delta": {"content": " from"}}]}',
+        'data: {"choices": [{"delta": {"content": " DeepSeek!"}}]}',
+        'data: [DONE]'
     ]
 
-    mock_response = mocker.MagicMock(spec=httpx.Response)
-    mock_response.iter_lines.return_value = chunks
+    async def aiter_lines():
+        for chunk in chunks:
+            yield chunk
 
-    mock_stream = mocker.patch("httpx.Client.stream", return_value=mock_response)
+    mock_response = mocker.MagicMock(spec=httpx.Response)
+    mock_response.aiter_lines.return_value = aiter_lines()
+
+    # Create an async context manager mock
+    async_mock_context = mocker.AsyncMock()
+    async_mock_context.__aenter__.return_value = mock_response
+
+    mock_stream = mocker.patch("httpx.AsyncClient.stream", return_value=async_mock_context)
 
     provider = DeepSeekProvider(deepseek_config)
-    stream_result = provider.generate("Say hi", stream=True)
+    stream_result = await provider.generate("Say hi", stream=True)
 
-    result = list(stream_result)
+    result = [chunk async for chunk in stream_result]
     assert result == ["Hello", " from", " DeepSeek!"]
     mock_stream.assert_called_once()
     call_args = mock_stream.call_args[1]['json']
     assert call_args['stream'] is True
 
-def test_deepseek_provider_http_error(deepseek_config, mocker):
+@pytest.mark.asyncio
+async def test_deepseek_provider_http_error(deepseek_config, mocker):
     """Tests that a ProviderError is raised on HTTP status errors for DeepSeek."""
     mock_response = mocker.MagicMock(spec=httpx.Response)
     mock_response.status_code = 401
@@ -81,16 +92,17 @@ def test_deepseek_provider_http_error(deepseek_config, mocker):
     http_error = httpx.HTTPStatusError(
         "Unauthorized", request=mocker.MagicMock(), response=mock_response
     )
-    mocker.patch("httpx.Client.post", side_effect=http_error)
+    mocker.patch("httpx.AsyncClient.post", side_effect=http_error)
 
     provider = DeepSeekProvider(deepseek_config)
     with pytest.raises(ProviderError, match="DeepSeek API error \\(401\\): Invalid API key"):
-        provider.generate("Say hi")
+        await provider.generate("Say hi")
 
-def test_deepseek_provider_timeout_error(deepseek_config, mocker):
+@pytest.mark.asyncio
+async def test_deepseek_provider_timeout_error(deepseek_config, mocker):
     """Tests that a ProviderError is raised on timeout for DeepSeek."""
-    mocker.patch("httpx.Client.post", side_effect=httpx.TimeoutException("Timeout!"))
+    mocker.patch("httpx.AsyncClient.post", side_effect=httpx.TimeoutException("Timeout!"))
 
     provider = DeepSeekProvider(deepseek_config)
     with pytest.raises(ProviderError, match="Request to DeepSeek timed out: Timeout!"):
-        provider.generate("Say hi")
+        await provider.generate("Say hi")

@@ -2,7 +2,7 @@ import asyncio
 import unittest
 from unittest.mock import patch
 
-from config.models import CollectorConfig, Config, FormatterConfig, ModelConfig
+from config.models import CacheConfig, CollectorConfig, Config, FormatterConfig, ModelConfig
 from core.contracts.models import Context, FileChange
 from core.pipeline import CommitMessageGenerator
 
@@ -35,6 +35,7 @@ class TestCommitMessageGenerator(unittest.TestCase):
             model=ModelConfig(provider="dummy"),
             formatter=FormatterConfig(template="simple.j2"),
             collectors=[CollectorConfig(type="dummy")],
+            cache=CacheConfig(enabled=False)  # Disable cache for testing
         )
 
     def test_generate_end_to_end(self, mock_provider_registry, mock_collector_registry):

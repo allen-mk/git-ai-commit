@@ -236,14 +236,14 @@
 ## 🔌 阶段六：Git Hook 集成 (Week 8)
 
 ### 6.1 Hook 脚本 [P1]
-- [ ] 6.1.1 prepare-commit-msg Hook
-  - [ ] Hook 脚本模板
-  - [ ] 安装和卸载命令
-  - [ ] 与手写消息的兼容处理
-- [ ] 6.1.2 Hook 配置
-  - [ ] --no-overwrite 选项
-  - [ ] Hook 启用/禁用开关
-  - [ ] 与现有 Hook 的兼容性
+- [x] 6.1.1 prepare-commit-msg Hook
+  - [x] Hook 脚本模板
+  - [x] 安装和卸载命令
+  - [x] 与手写消息的兼容处理
+- [x] 6.1.2 Hook 配置
+  - [x] --no-overwrite 选项
+  - [x] Hook 启用/禁用开关
+  - [x] 与现有 Hook 的兼容性
 
 **验收标准**: Git Hook 安装后能自动生成 commit message，不干扰正常工作流
 
